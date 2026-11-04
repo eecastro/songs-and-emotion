@@ -466,15 +466,19 @@ function renderJoin(){
 }
 
 async function refresh(force){
-  if (!S.period || !S.group) return;
+  if (S.choosing || !S.period || !S.group) return;
+  const asked = S.period + '|' + S.group;
   try {
     const d = await call({ action: 'state', period: S.period, group: S.group, device: S.device }, 'GET');
+    // Ignore an answer that arrives after the student switched to another period or group.
+    if (S.choosing || asked !== S.period + '|' + S.group) return;
     setNotice('');
     S.data = d;
     const key = [d.period, d.round, d.phase, S.group].join('|');
     if (force || key !== S.viewKey) { S.viewKey = key; renderStudent(true); }
     else softUpdate();
   } catch (e) {
+    if (S.choosing || asked !== S.period + '|' + S.group) return;
     setNotice('Can’t reach the class server. ' + e.message + ' Retrying automatically.');
     if (force && !S.data) app.innerHTML = '<div class="wait"><p>Still connecting to the class server…</p></div>';
   }
@@ -607,7 +611,7 @@ function renderResults(){
 }
 
 function startStudent(){
-  if (!S.period || !S.group) renderJoin(); else refresh(true);
+  if (!S.period || !S.group) { S.choosing = true; renderJoin(); } else refresh(true);
   setInterval(() => { if (!document.hidden) refresh(false); }, CONFIG.POLL_MS + Math.floor(Math.random() * 2000));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(false); });
   if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY) refresh(false); });
@@ -624,7 +628,7 @@ if (linkKey) {
   try { history.replaceState(null, '', location.pathname + '?teacher' + location.hash); } catch (e) {}
 }
 const T = {
-  pin: sess.get('mp-pin') || (CONFIG.API_URL ? '' : 'demo'),
+  pin: sess.get('mp-pin') || '', locked: false,
   period: sess.get('mp-tperiod') || CONFIG.PERIODS[0].id,
   data: null, last: '', idx: 0, showMap: false
 };
@@ -633,9 +637,9 @@ function renderTeacherLogin(err){
   $('#ctx').textContent = 'Teacher view';
   app.innerHTML = `
   <h1 class="display">Teacher view</h1>
-  <p class="lede">Open the dashboard from your teacher bookmark: this site’s address followed by <strong>?teacher=</strong> and your key, the TEACHER_PIN set in Apps Script.</p>
+  <p class="lede">The Apps Script still has a TEACHER_PIN set. To open the dashboard without one, set <strong>TEACHER_PIN = ''</strong> in Apps Script and publish a new version. Or enter the PIN for now.</p>
   <form id="tlogin" style="max-width:22rem">
-    <label class="field"><span>Or enter the key here</span><input type="password" name="pin" autocomplete="current-password" required></label>
+    <label class="field"><span>Teacher PIN</span><input type="password" name="pin" autocomplete="current-password" required></label>
     <div class="actions"><button class="primary" type="submit">Open dashboard</button></div>
     <p class="status err">${esc(err || '')}</p>
   </form>`;
@@ -643,14 +647,14 @@ function renderTeacherLogin(err){
 }
 
 async function tRefresh(force){
-  if (!T.pin) return;
+  if (T.locked) return;
   try {
     const d = await call({ action: 'teacher', pin: T.pin, period: T.period });
     setNotice('');
     const s = JSON.stringify(d);
     if (force || s !== T.last) { T.last = s; T.data = d; renderTeacher(); }
   } catch (e) {
-    if (/PIN/.test(e.message)) { T.pin = ''; sess.del('mp-pin'); renderTeacherLogin('That key doesn’t match the TEACHER_PIN in Apps Script. Check your bookmark.'); return; }
+    if (/PIN/.test(e.message)) { const had = !!T.pin; T.pin = ''; T.locked = true; sess.del('mp-pin'); renderTeacherLogin(had ? 'That PIN doesn’t match the one in Apps Script.' : ''); return; }
     setNotice('Can’t reach the class server. ' + e.message + ' Retrying automatically.');
   }
 }
@@ -732,9 +736,10 @@ function renderTeacher(){
 
 function startTeacher(){
   document.body.classList.add('teacher');
-  if (!T.pin) renderTeacherLogin(); else tRefresh(true);
-  setInterval(() => { if (!document.hidden && T.pin) tRefresh(false); }, CONFIG.TEACHER_POLL_MS);
-  if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY && T.pin) tRefresh(false); });
+  app.innerHTML = '<p class="muted">Opening the dashboard…</p>';
+  tRefresh(true);
+  setInterval(() => { if (!document.hidden) tRefresh(false); }, CONFIG.TEACHER_POLL_MS);
+  if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY) tRefresh(false); });
   document.addEventListener('keydown', e => {
     if (!T.data || T.data.phase !== 'listen' || e.target.closest('input,textarea')) return;
     if (e.key === 'ArrowRight') { T.idx++; renderTeacher(); }
@@ -751,14 +756,14 @@ document.addEventListener('submit', e => {
     e.preventDefault();
     const p = f.querySelector('input[name=period]:checked'), g = f.querySelector('input[name=group]:checked');
     if (!p || !g) { setNotice('Choose your class period and tree group.'); return; }
-    S.period = p.value; S.group = g.value;
+    S.period = p.value; S.group = g.value; S.choosing = false; S.data = null;
     store.set('mp-period', S.period); store.set('mp-group', S.group);
-    S.viewKey = ''; setNotice(''); refresh(true);
+    S.viewKey = ''; setNotice(''); app.innerHTML = '<p class="muted">Loading…</p>'; refresh(true);
   } else if (f.id === 'playlist') {
     e.preventDefault(); submitPlaylist(f);
   } else if (f.id === 'tlogin') {
     e.preventDefault();
-    T.pin = f.pin.value.trim(); sess.set('mp-pin', T.pin); tRefresh(true);
+    T.pin = f.pin.value.trim(); T.locked = false; sess.set('mp-pin', T.pin); tRefresh(true);
   }
 });
 
@@ -772,7 +777,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-action]');
   if (!b) return;
   const a = b.dataset.action;
-  if (a === 'change-group') { S.data = null; S.viewKey = ''; renderJoin(); }
+  if (a === 'change-group') { S.choosing = true; S.data = null; S.viewKey = ''; setNotice(''); renderJoin(); }
   else if (a === 'vote') castVote(b);
   else if (a === 'phase') { if (b.dataset.phase !== T.data.phase) tAction({ action: 'setPhase', phase: b.dataset.phase }); }
   else if (a === 'prev') { T.idx--; renderTeacher(); }
