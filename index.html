@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mood Playlists</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#EEF0F6; --surface:#FFFFFF; --sunk:#E2E5EF; --ink:#1B1E33; --muted:#565B74; --line:#CBD0DE;
+  --maintain:#17766E; --enhance:#9E5600; --reduce:#4A4EC2; --danger:#B42318; --focus:#4A4EC2;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,-apple-system,sans-serif;
+  --r-sm:8px; --r-lg:20px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#121427; --surface:#1B1E36; --sunk:#252948; --ink:#ECEDF6; --muted:#A8ACC6; --line:#373C66;
+    --maintain:#5FCABF; --enhance:#F2A54A; --reduce:#A7AAFF; --danger:#FF8A80; --focus:#A7AAFF;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:1.0625rem/1.55 var(--body);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.s-maintain{--tone:var(--maintain)} .s-enhance{--tone:var(--enhance)} .s-reduce{--tone:var(--reduce)}
+
+/* header */
+.bar{display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  max-width:46rem; margin:0 auto; padding:1rem 1.25rem .25rem}
+body.teacher .bar, body.teacher main{max-width:76rem}
+.brand{font-family:var(--display); font-weight:800; font-size:1.05rem; letter-spacing:-.01em}
+#ctx{display:flex; align-items:center; gap:.6rem; color:var(--muted); font-size:.95rem}
+main{max-width:46rem; margin:0 auto; padding:.75rem 1.25rem 4rem}
+#demo{max-width:46rem; margin:.5rem auto 0; padding:0 1.25rem; font-size:.9rem; color:var(--muted)}
+body.teacher #demo{max-width:76rem}
+#demo p{margin:0; padding:.6rem .9rem; border:1.5px dashed var(--line); border-radius:var(--r-sm)}
+#notice:empty{display:none}
+#notice{max-width:46rem; margin:.5rem auto 0; padding:.6rem 1.25rem; color:var(--danger); font-weight:700}
+
+/* type */
+.display{font-family:var(--display); font-weight:800; letter-spacing:-.025em; line-height:1.02;
+  font-size:clamp(2.1rem,7vw,3.4rem); margin:.1rem 0 .6rem}
+h2,h3{font-family:var(--display); font-weight:800; letter-spacing:-.015em; line-height:1.15}
+h2{font-size:1.45rem; margin:2rem 0 .6rem}
+p{margin:.5rem 0}
+.lede{font-size:1.15rem; max-width:36em}
+.muted{color:var(--muted)}
+.small{font-size:.92rem}
+a{color:inherit; text-underline-offset:.18em}
+
+/* controls */
+button{font:inherit; color:inherit; cursor:pointer}
+.primary,.ghost,.danger{border-radius:999px; padding:.75rem 1.35rem; font-weight:700; border:2px solid var(--ink)}
+.primary{background:var(--ink); color:var(--bg)}
+.ghost{background:transparent}
+.danger{background:transparent; border-color:var(--danger); color:var(--danger)}
+.link{background:none; border:0; padding:0; text-decoration:underline; text-underline-offset:.18em; color:var(--muted)}
+button:disabled{opacity:.55; cursor:progress}
+:focus-visible{outline:3px solid var(--focus); outline-offset:3px}
+input[type=text],input[type=password],textarea{
+  width:100%; font:inherit; color:var(--ink); background:var(--surface);
+  border:1.5px solid var(--line); border-radius:var(--r-sm); padding:.6rem .75rem}
+textarea{min-height:6.5rem; resize:vertical}
+label.field{display:block; margin:1rem 0 0}
+label.field > span{display:block; font-weight:700; margin-bottom:.3rem}
+.hint{display:block; font-weight:400; color:var(--muted); font-size:.92rem}
+fieldset{border:0; padding:0; margin:1.6rem 0 0}
+legend{font-weight:700; margin-bottom:.6rem; padding:0}
+
+/* pickers */
+.pills,.trees{display:flex; flex-wrap:wrap; gap:.5rem}
+.trees{display:grid; grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr))}
+.pick{position:relative}
+.pick input{position:absolute; opacity:0; inset:0; margin:0}
+.pick span{display:block; text-align:center; padding:.7rem 1.1rem; border:2px solid var(--line);
+  border-radius:999px; font-weight:700; background:var(--surface)}
+.trees .pick span{border-radius:var(--r-sm); padding:.9rem .5rem; font-family:var(--display); font-size:1.15rem}
+.pick input:checked + span{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.pick input:focus-visible + span{outline:3px solid var(--focus); outline-offset:3px}
+.actions{margin-top:1.8rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+
+/* scenario card: the one loud element */
+.scenario{background:var(--surface); border-radius:var(--r-lg); padding:1.4rem 1.4rem 1.5rem; margin-top:.75rem}
+.mood{display:block}
+.mood path{fill:none; stroke:var(--tone); stroke-linecap:round; stroke-width:3.5}
+.mood-hero{width:100%; height:76px; margin:0 0 .6rem}
+.mood-sm{width:46px; height:16px; flex:none}
+.mood-sm path{stroke-width:9}
+.draw path{stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.2s cubic-bezier(.3,.1,.2,1) .1s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion: reduce){ .draw path{animation:none; stroke-dashoffset:0} }
+.strategy{color:var(--tone); font-weight:700; margin:0; display:flex; align-items:center; gap:.5rem}
+.scenario-text{font-size:1.12rem; max-width:34em}
+
+/* song form */
+.song{display:grid; grid-template-columns:2.2rem 1fr; gap:.25rem .9rem; padding:1rem 0; border-top:1.5px solid var(--line)}
+.song:last-of-type{border-bottom:1.5px solid var(--line)}
+.song .num{font-family:var(--display); font-weight:800; font-size:1.6rem; line-height:1; color:var(--muted); padding-top:.35rem}
+.song .fields{display:grid; grid-template-columns:3fr 2fr; gap:.5rem}
+.song .play{grid-column:2; display:flex; align-items:center; gap:.5rem; font-size:.95rem; margin-top:.35rem}
+.song .play input{width:1.15rem; height:1.15rem; accent-color:var(--ink)}
+@media (max-width:540px){ .song .fields{grid-template-columns:1fr} }
+.status{font-weight:700}
+.status.err{color:var(--danger)}
+.saved-line{color:var(--muted); font-size:.95rem; margin-top:1rem}
+
+/* playlists */
+.pl{background:var(--surface); border-radius:var(--r-lg); padding:1.25rem 1.4rem 1.4rem; margin:1rem 0; border:2px solid transparent}
+.pl.chosen{border-color:var(--tone)}
+.pl-head{display:flex; gap:1rem; align-items:flex-start}
+.letter{font-family:var(--display); font-weight:800; font-size:3.2rem; line-height:.85; color:var(--tone); min-width:2.4rem}
+.pl h3{font-size:1.35rem; margin:.15rem 0 .2rem}
+.songs{list-style:none; padding:0; margin:1rem 0 0; counter-reset:s}
+.songs li{counter-increment:s; display:grid; grid-template-columns:1.6rem 1fr; column-gap:.4rem; padding:.45rem 0}
+.songs li::before{content:counter(s); color:var(--muted); font-weight:700}
+.songs li > *{grid-column:2}
+.song-title{font-weight:700; text-decoration:underline; text-decoration-thickness:1.5px; text-decoration-color:var(--line)}
+.song-title:hover{text-decoration-color:currentColor}
+.song-artist{color:var(--muted)}
+.songs .featured .song-title{color:var(--tone)}
+.tag{display:inline-block; font-size:.85rem; font-weight:700; color:var(--tone); margin-top:.1rem}
+.links{display:flex; gap:1rem; font-size:.9rem; margin-top:.15rem}
+.why{font-style:italic; color:var(--muted); margin-top:.8rem; max-width:36em}
+.vote-btn{margin-top:1rem}
+
+/* results */
+.results{list-style:none; padding:0; margin:1rem 0}
+.res{background:var(--surface); border-radius:var(--r-lg); padding:1.1rem 1.3rem; margin:.8rem 0}
+.res-top{display:flex; align-items:center; gap:1rem}
+.res .letter{font-size:2.4rem}
+.res-name{flex:1; display:flex; flex-direction:column}
+.res-name strong{font-family:var(--display); font-size:1.3rem; font-weight:800}
+.res-name span{color:var(--muted)}
+.res-votes{font-weight:700; white-space:nowrap}
+.meter{height:10px; background:var(--sunk); border-radius:999px; margin-top:.8rem; overflow:hidden}
+.meter span{display:block; height:100%; background:var(--tone); border-radius:999px}
+.winner{font-family:var(--display); font-weight:800; font-size:1.25rem; margin:.6rem 0 0}
+.res.win{outline:3px solid var(--tone); outline-offset:-3px}
+
+/* waiting */
+.wait{background:var(--surface); border-radius:var(--r-lg); padding:2rem 1.5rem; margin-top:1rem}
+
+/* teacher */
+.t-top{display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:center; justify-content:space-between; margin-top:.5rem}
+.phases{list-style:none; padding:0; margin:1.4rem 0 0; display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem}
+@media (max-width:700px){ .phases{grid-template-columns:repeat(2,1fr)} }
+.phase{width:100%; text-align:left; padding:.8rem 1rem; border:2px solid var(--line); background:var(--surface); border-radius:var(--r-sm); font-weight:700}
+.phase .n{display:block; font-family:var(--display); font-size:1.4rem; line-height:1; color:var(--muted); margin-bottom:.2rem}
+.phase.on{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.phase.on .n{color:inherit}
+.groups{list-style:none; padding:0; margin:1rem 0; display:grid; grid-template-columns:repeat(auto-fill,minmax(13rem,1fr)); gap:.6rem}
+.groups li{background:var(--surface); border-radius:var(--r-sm); padding:.9rem 1rem; border:2px solid var(--line); display:flex; flex-direction:column; gap:.1rem}
+.groups li.in{border-color:var(--ink)}
+.groups strong{font-family:var(--display); font-size:1.2rem}
+.groups .state{font-size:.92rem; color:var(--muted)}
+.groups li.in .state{color:var(--ink); font-weight:700}
+.count{font-family:var(--display); font-weight:800; font-size:clamp(4rem,12vw,8rem); line-height:1; margin:1rem 0 .2rem}
+.projector{background:var(--surface); border-radius:var(--r-lg); padding:2rem; margin-top:1.2rem;
+  display:grid; grid-template-columns:auto 1fr; gap:0 2rem}
+.projector .letter{font-size:clamp(5rem,12vw,9rem)}
+.projector h2{font-size:clamp(1.8rem,3.6vw,3rem); margin:.2rem 0 .4rem}
+.projector .scenario-text{font-size:1.2rem}
+.projector .songs{font-size:1.3rem}
+.projector .why{font-size:1.15rem}
+@media (max-width:700px){ .projector{grid-template-columns:1fr} }
+.pager{display:flex; align-items:center; gap:1rem; margin-top:1rem; flex-wrap:wrap}
+.round-foot{margin-top:3rem; padding-top:1.2rem; border-top:1.5px solid var(--line); display:flex; gap:1rem; align-items:center; flex-wrap:wrap}
+.student-link{font-size:.95rem; color:var(--muted)}
+.student-link code{font-family:var(--body); font-weight:700; color:var(--ink); word-break:break-all}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+</style>
+</head>
+<body>
+<header class="bar">
+  <span class="brand">Mood playlists</span>
+  <span id="ctx"></span>
+</header>
+<div id="demo"></div>
+<div id="notice" role="status" aria-live="polite"></div>
+<main id="app"><p class="muted">Loading…</p></main>
+
+<script>
+/* =====================================================================
+   SETTINGS: the only part you normally edit
+   ===================================================================== */
+const CONFIG = {
+  // Paste the Apps Script web-app URL here (ends in /exec).
+  // Leave it blank to try everything in one browser (demo mode).
+  API_URL: 'https://script.google.com/macros/s/AKfycbxBzxyAAMj1kU-1IwQaNXi5Fv6-G-ZPBRAFsmSO4UNWeC1GSfWU3zUds-lOWpSiRd8jDQ/exec',
+
+  // Class periods students choose from. Keep the ids short (letters/digits).
+  PERIODS: [
+    { id: 'p3', label: '3rd period' },
+    { id: 'p7', label: '7th period' }
+  ],
+
+  // 'college' (dorm/roommate versions) or 'highschool' (the 7* doc versions).
+  SCENARIO_SET: 'college',
+
+  POLL_MS: 8000,          // how often student screens check for a phase change
+  TEACHER_POLL_MS: 5000   // how often the teacher screen refreshes
+};
+
+/* =====================================================================
+   Activity content
+   ===================================================================== */
+const GROUPS = ['Birch', 'Cedar', 'Maple', 'Oak', 'Pine', 'Redwood', 'Willow'];
+const SCENARIO_KEYS = ['focus', 'vibes', 'energy', 'confidence', 'stress', 'frustration', 'sunday'];
+const STRATEGY = {
+  maintain: 'Maintain: keep this feeling going',
+  enhance: 'Enhance: turn this feeling up',
+  reduce: 'Reduce: bring this feeling down'
+};
+const SCENARIO_SETS = {
+  college: {
+    focus: { title: 'Keep the Focus Going', strategy: 'maintain',
+      text: 'It’s 10 PM, you’re in the library, and you’ve finally hit that perfect study flow. Create a playlist that **maintains** this focused zone without being distracting or making you drowsy.' },
+    vibes: { title: 'Hold the Good Vibes', strategy: 'maintain',
+      text: 'You just had an amazing night with your floor/hall mates—inside jokes, deep talks, perfect college moment. Walking back to your room, you want to **maintain** this warm, connected feeling. What songs keep it alive?' },
+    energy: { title: 'Pump Up the Energy', strategy: 'enhance',
+      text: 'It’s Friday night and you’re currently at maybe 40% energy, still in sweats, kind of tired from the week. You need to **enhance** your mood to ready-to-go-out levels in the next 30 minutes. Build that transformation playlist.' },
+    confidence: { title: 'Boost the Confidence', strategy: 'enhance',
+      text: 'You’re about to walk into that class where you don’t know anyone yet, or you’re heading to a party where you only know one person. Create a playlist that **enhances** your self-assurance from nervous to naturally social.' },
+    stress: { title: 'Dial Down the Stress', strategy: 'reduce',
+      text: 'You just checked Canvas/Blackboard and discovered three assignments you forgot about, your meal plan is running low, and your parents keep texting about grades. Build a playlist that **reduces** this overwhelming anxiety and stress to manageable levels.' },
+    frustration: { title: 'Cool the Frustration', strategy: 'reduce',
+      text: 'Your roommate did that annoying thing AGAIN, or you just had the worst group project meeting ever. You need to **reduce** this anger before you say something you’ll regret. What songs help you decompress?' },
+    sunday: { title: 'Ease the Homesickness', strategy: 'reduce',
+      text: 'It’s Sunday night, you just saw your high school friends’ stories from home, and you’re feeling that hollow missing-everything ache. Create a playlist that helps **reduce** the sadness without making it worse—processing without wallowing.' }
+  },
+  highschool: {
+    focus: { title: 'Keep the Focus Going', strategy: 'maintain',
+      text: 'It’s 11 PM, you’re at your desk studying for tomorrow’s AP exam, and you’ve finally hit that perfect flow state. Create a playlist that **maintains** this focused zone without being distracting or making you drowsy.' },
+    vibes: { title: 'Hold the Good Vibes', strategy: 'maintain',
+      text: 'You just had an amazing night with your friends—inside jokes, deep talks, perfect high school moments. Heading home or to your room, you want to **maintain** this warm, connected feeling. What songs keep it alive?' },
+    energy: { title: 'Pump Up the Energy', strategy: 'enhance',
+      text: 'It’s Friday night and you’re currently at maybe 40% energy, still in sweats on the couch, kind of tired from the week. You need to **enhance** your mood to ready-to-go-out levels in the next 30 minutes. Build that transformation playlist.' },
+    confidence: { title: 'Boost the Confidence', strategy: 'enhance',
+      text: 'You’re about to walk into your new elective where you don’t know anyone yet, or you’re heading to a party where you only know one person. Create a playlist that **enhances** your self-assurance from nervous to naturally social.' },
+    stress: { title: 'Dial Down the Stress', strategy: 'reduce',
+      text: 'You just realized you have three assignments due tomorrow, college application deadlines are approaching, and your parents keep texting asking about your grades and test scores. Build a playlist that **reduces** this overwhelming anxiety to manageable levels.' },
+    frustration: { title: 'Cool the Frustration', strategy: 'reduce',
+      text: 'Your sibling borrowed your stuff without asking AGAIN, or you just had the worst group project meeting ever, or your parents set a new rule that feels totally unfair. You need to **reduce** this anger before you say something you’ll regret. What songs help you decompress?' },
+    sunday: { title: 'Ease the Transition Blues', strategy: 'reduce',
+      text: 'It’s Sunday night, and you’re feeling that weird mix of emotions about everything changing—friends talking about different colleges, realizing senior year is flying by, or missing how simple things used to be. Create a playlist that helps **reduce** the melancholy without making it worse—processing without wallowing.' }
+  }
+};
+const SCN = SCENARIO_SETS[CONFIG.SCENARIO_SET] || SCENARIO_SETS.college;
+const PHASES = [
+  { id: 'collect', label: 'Collect playlists' },
+  { id: 'listen', label: 'Listen' },
+  { id: 'vote', label: 'Vote' },
+  { id: 'results', label: 'Reveal results' }
+];
+
+/* =====================================================================
+   Small helpers
+   ===================================================================== */
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k){ try { localStorage.removeItem(k); } catch (e) {} }
+};
+const sess = {
+  get(k){ try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del(k){ try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const rich = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+const clip = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+const periodLabel = id => (CONFIG.PERIODS.find(p => p.id === id) || { label: id }).label;
+const scenarioOf = key => SCN[key] || { title: 'Scenario', strategy: 'maintain', text: '' };
+const timeStr = iso => { try { return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
+function newId(){
+  const a = new Uint8Array(12);
+  (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 256);
+  return Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+}
+function hashStr(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h >>> 0; }
+function newMap(shuffle = true){
+  const s = SCENARIO_KEYS.slice();
+  if (shuffle) for (let i = s.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; }
+  const m = {}; GROUPS.forEach((g, i) => m[g] = s[i]); return m;
+}
+function setNotice(msg){ $('#notice').textContent = msg || ''; }
+
+const LINES = {
+  maintain: 'M4 29 C 24 17, 44 41, 64 29 S 104 17, 124 29 S 164 41, 196 29',
+  enhance: 'M4 52 C 40 51, 72 45, 102 33 S 160 9, 196 6',
+  reduce: 'M4 6 C 40 7, 72 13, 102 25 S 160 49, 196 52'
+};
+function moodLine(strategy, cls){
+  return `<svg class="${cls}" viewBox="0 0 200 58" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path pathLength="1" d="${LINES[strategy] || LINES.maintain}"/></svg>`;
+}
+
+/* =====================================================================
+   Data layer: Apps Script when API_URL is set, otherwise this browser only
+   ===================================================================== */
+async function call(params, method = 'POST'){
+  let j;
+  if (!CONFIG.API_URL) {
+    j = await Local.call(params);
+  } else {
+    const clean = {}; Object.keys(params).forEach(k => { if (params[k] != null) clean[k] = params[k]; });
+    const r = method === 'GET'
+      ? await fetch(CONFIG.API_URL + '?' + new URLSearchParams(clean), { cache: 'no-store' })
+      : await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(clean) }); // text/plain: no CORS preflight
+    if (!r.ok) throw new Error('The class server answered with an error (' + r.status + ').');
+    j = await r.json();
+  }
+  if (!j || !j.ok) throw new Error((j && j.error) || 'Something went wrong.');
+  return j;
+}
+
+function buildPlaylists(d, reveal){
+  const list = Object.keys(d.subs).map(g => d.subs[g]);
+  list.sort((a, b) => hashStr(d.c.round + ':' + a.scenario) - hashStr(d.c.round + ':' + b.scenario));
+  return list.map((s, i) => {
+    const o = { letter: String.fromCharCode(65 + i), scenario: s.scenario, songs: s.songs, featured: s.featured, start: s.start, why: s.why };
+    if (reveal) {
+      o.group = s.group;
+      o.votes = Object.keys(d.votes).filter(k => d.votes[k].scenario === s.scenario).length;
+    }
+    return o;
+  });
+}
+
+const Local = {
+  KEY: 'mood-playlists-demo-v1',
+  load(){ try { const d = JSON.parse(localStorage.getItem(this.KEY)); if (d && d.control) return d; } catch (e) {} return { control: {}, subs: [], votes: [] }; },
+  save(db){ try { localStorage.setItem(this.KEY, JSON.stringify(db)); } catch (e) {} },
+  round(db, period){
+    if (!db.control[period]) db.control[period] = { round: 1, phase: 'collect', map: newMap() };
+    const c = db.control[period], subs = {}, votes = {};
+    db.subs.forEach(s => { if (s.period === period && s.round === c.round) subs[s.group] = s; });
+    db.votes.forEach(v => { if (v.period === period && v.round === c.round) votes[v.device] = v; });
+    return { c, subs, votes };
+  },
+  teacherState(d, period){
+    return { ok: true, period, round: d.c.round, phase: d.c.phase,
+      groups: GROUPS.map(g => ({ group: g, scenario: d.c.map[g], submitted: !!d.subs[g], at: d.subs[g] ? d.subs[g].at : null })),
+      voteCount: Object.keys(d.votes).length, playlists: buildPlaylists(d, true) };
+  },
+  async call(p){
+    await new Promise(r => setTimeout(r, 120));
+    const db = this.load(), period = String(p.period || '');
+    if (!/^[A-Za-z0-9_-]{1,12}$/.test(period)) throw new Error('Missing or invalid class period.');
+    const d = this.round(db, period);
+    let out;
+    switch (p.action) {
+      case 'state': {
+        out = { ok: true, period, round: d.c.round, phase: d.c.phase, submittedCount: Object.keys(d.subs).length };
+        if (GROUPS.includes(p.group)) { out.myScenario = d.c.map[p.group]; out.mySubmission = d.subs[p.group] || null; }
+        if (d.c.phase !== 'collect') out.playlists = buildPlaylists(d, false);
+        if (p.device && d.votes[p.device]) out.myVote = d.votes[p.device].scenario;
+        if (d.c.phase === 'results') out.results = buildPlaylists(d, true).sort((a, b) => b.votes - a.votes);
+        break;
+      }
+      case 'submit': {
+        if (d.c.phase !== 'collect') throw new Error('Submissions are closed for this round.');
+        if (!GROUPS.includes(p.group)) throw new Error('Pick your tree group first.');
+        const songs = (Array.isArray(p.songs) ? p.songs : []).slice(0, 3).map(s => ({ title: clip(s && s.title, 120), artist: clip(s && s.artist, 120) }));
+        if (songs.length !== 3 || songs.some(s => !s.title)) throw new Error('Add a title for all three songs.');
+        const f = Number(p.featured);
+        if (![0, 1, 2].includes(f)) throw new Error('Choose the song you’ll play for the class.');
+        const sub = { group: p.group, scenario: d.c.map[p.group], songs, featured: f, start: clip(p.start, 12), why: clip(p.why, 600), at: new Date().toISOString() };
+        db.subs.push(Object.assign({ period, round: d.c.round }, sub));
+        out = { ok: true, submission: sub };
+        break;
+      }
+      case 'vote': {
+        if (d.c.phase !== 'vote') throw new Error('Voting isn’t open right now.');
+        if (!GROUPS.includes(p.group)) throw new Error('Pick your tree group first.');
+        if (!Object.keys(d.subs).some(g => d.subs[g].scenario === p.scenario)) throw new Error('That playlist doesn’t exist.');
+        if (d.c.map[p.group] === p.scenario) throw new Error('You can’t vote for your own group’s playlist.');
+        db.votes.push({ period, round: d.c.round, device: p.device, group: p.group, scenario: p.scenario, at: new Date().toISOString() });
+        out = { ok: true, myVote: p.scenario };
+        break;
+      }
+      case 'teacher': out = this.teacherState(d, period); break;
+      case 'setPhase':
+        if (!PHASES.some(x => x.id === p.phase)) throw new Error('Unknown phase.');
+        d.c.phase = p.phase; out = this.teacherState(this.round(db, period), period); break;
+      case 'newRound':
+        db.control[period] = { round: d.c.round + 1, phase: 'collect', map: newMap() };
+        out = this.teacherState(this.round(db, period), period); break;
+      default: throw new Error('Unknown action.');
+    }
+    this.save(db);
+    return out;
+  }
+};
+
+/* =====================================================================
+   Shared views
+   ===================================================================== */
+const app = $('#app');
+
+function scenarioCard(key, { tag = 'h1', animate = false } = {}){
+  const sc = scenarioOf(key);
+  return `<article class="scenario s-${sc.strategy}">
+    ${moodLine(sc.strategy, 'mood mood-hero' + (animate ? ' draw' : ''))}
+    <p class="strategy">${esc(STRATEGY[sc.strategy])}</p>
+    <${tag} class="display">${esc(sc.title)}</${tag}>
+    <p class="scenario-text">${rich(sc.text)}</p>
+  </article>`;
+}
+
+function songList(p, { links = false } = {}){
+  return `<ol class="songs">${(p.songs || []).map((s, i) => {
+    const feat = i === p.featured;
+    const q = encodeURIComponent((s.title + ' ' + (s.artist || '')).trim());
+    return `<li class="${feat ? 'featured' : ''}">
+      <span><a class="song-title" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">${esc(s.title)}<span class="sr"> (search YouTube, opens in a new tab)</span></a>${s.artist ? `<br><span class="song-artist">${esc(s.artist)}</span>` : ''}</span>
+      ${feat ? `<span class="tag">Played in class${p.start ? ', from ' + esc(p.start) : ''}</span>` : ''}
+      ${links && feat ? `<span class="links"><a href="https://open.spotify.com/search/${q}" target="_blank" rel="noopener">Find on Spotify</a></span>` : ''}
+    </li>`;
+  }).join('')}</ol>`;
+}
+
+function resultsList(results, { group = null, songs = false } = {}){
+  if (!results.length) return '<p class="muted">No playlists were submitted this round.</p>';
+  const max = Math.max(1, ...results.map(r => r.votes));
+  const top = results[0].votes;
+  return `<ol class="results">${results.map(r => {
+    const sc = scenarioOf(r.scenario);
+    const win = top > 0 && r.votes === top;
+    return `<li class="res s-${sc.strategy}${win ? ' win' : ''}">
+      <div class="res-top">
+        <span class="letter" aria-hidden="true">${r.letter}</span>
+        <div class="res-name"><strong>${esc(r.group)}${group === r.group ? ' (your group)' : ''}</strong><span>Playlist ${r.letter}: ${esc(sc.title)}</span></div>
+        <span class="res-votes">${r.votes} ${r.votes === 1 ? 'vote' : 'votes'}</span>
+      </div>
+      <div class="meter" aria-hidden="true"><span style="width:${Math.round(r.votes / max * 100)}%"></span></div>
+      ${win ? '<p class="winner">🍭 Nailed it</p>' : ''}
+      ${songs ? songList(r) : ''}
+    </li>`;
+  }).join('')}</ol>`;
+}
+
+/* =====================================================================
+   Student mode
+   ===================================================================== */
+const S = {
+  period: store.get('mp-period'),
+  group: store.get('mp-group'),
+  device: store.get('mp-device'),
+  data: null, viewKey: '', softKey: ''
+};
+if (!CONFIG.PERIODS.some(p => p.id === S.period)) S.period = null;
+if (!GROUPS.includes(S.group)) S.group = null;
+if (!S.device) { S.device = newId(); store.set('mp-device', S.device); }
+
+function studentHeader(){
+  $('#ctx').innerHTML = S.period && S.group
+    ? `<span>${esc(S.group)}, ${esc(periodLabel(S.period))}</span><button class="link" data-action="change-group">Change group</button>`
+    : '';
+}
+
+function renderJoin(){
+  studentHeader();
+  app.innerHTML = `
+  <h1 class="display">Mood playlists</h1>
+  <p class="lede">We use music to manage how we feel: keeping a good feeling going, turning a feeling up, or bringing one down. Your tree group gets one scenario. Agree on three songs that fit it and pick one to play for the class. Then everyone votes, anonymously, for the playlist that best nails its scenario.</p>
+  <form id="join">
+    <fieldset><legend>Class period</legend><div class="pills">
+      ${CONFIG.PERIODS.map(p => `<label class="pick"><input type="radio" name="period" value="${esc(p.id)}" ${p.id === S.period ? 'checked' : ''} required><span>${esc(p.label)}</span></label>`).join('')}
+    </div></fieldset>
+    <fieldset><legend>Tree group</legend><div class="trees">
+      ${GROUPS.map(g => `<label class="pick"><input type="radio" name="group" value="${g}" ${g === S.group ? 'checked' : ''} required><span>${g}</span></label>`).join('')}
+    </div></fieldset>
+    <div class="actions"><button class="primary" type="submit">Show our scenario</button></div>
+  </form>`;
+}
+
+async function refresh(force){
+  if (!S.period || !S.group) return;
+  try {
+    const d = await call({ action: 'state', period: S.period, group: S.group, device: S.device }, 'GET');
+    setNotice('');
+    S.data = d;
+    const key = [d.period, d.round, d.phase, S.group].join('|');
+    if (force || key !== S.viewKey) { S.viewKey = key; renderStudent(true); }
+    else softUpdate();
+  } catch (e) {
+    setNotice('Can’t reach the class server. ' + e.message + ' Retrying automatically.');
+    if (force && !S.data) app.innerHTML = '<div class="wait"><p>Still connecting to the class server…</p></div>';
+  }
+}
+
+function softKeyOf(d){
+  return JSON.stringify([d.mySubmission && d.mySubmission.at, d.myVote, (d.playlists || []).length, d.results]);
+}
+
+function softUpdate(){
+  const d = S.data, k = softKeyOf(d);
+  if (k === S.softKey) return;
+  S.softKey = k;
+  if (d.phase === 'collect') {
+    // Never redraw the form while someone is typing; just update the saved line.
+    const line = $('#saved-line');
+    if (line) line.textContent = savedLineText(d.mySubmission);
+  } else {
+    renderStudent(false);
+  }
+}
+
+function savedLineText(sub){
+  return sub ? `Your group last saved this playlist at ${timeStr(sub.at)}. Saving again replaces it.` : 'Nothing saved for your group yet.';
+}
+
+function renderStudent(fresh){
+  studentHeader();
+  const d = S.data;
+  S.softKey = softKeyOf(d);
+  if (d.phase === 'collect') return renderCollect(fresh);
+  if (d.phase === 'listen') return renderListen();
+  if (d.phase === 'vote') return renderVote();
+  return renderResults();
+}
+
+function renderCollect(animate){
+  const d = S.data, sub = d.mySubmission;
+  const v = (i, f) => esc(sub && sub.songs[i] ? sub.songs[i][f] : '');
+  app.innerHTML = `
+  ${scenarioCard(d.myScenario, { animate })}
+  <form id="playlist" novalidate>
+    <h2>Your three songs</h2>
+    ${[0, 1, 2].map(i => `
+    <div class="song">
+      <span class="num" aria-hidden="true">${i + 1}</span>
+      <div class="fields">
+        <label><span class="sr">Song ${i + 1} title</span><input type="text" name="t${i}" value="${v(i, 'title')}" placeholder="Song title" maxlength="120" autocomplete="off"></label>
+        <label><span class="sr">Song ${i + 1} artist</span><input type="text" name="a${i}" value="${v(i, 'artist')}" placeholder="Artist" maxlength="120" autocomplete="off"></label>
+      </div>
+      <label class="play"><input type="radio" name="featured" value="${i}" ${sub && sub.featured === i ? 'checked' : ''}> We’ll play this one for the class</label>
+    </div>`).join('')}
+    <label class="field"><span>Start the class clip at <span class="hint">Optional, for example 1:09</span></span>
+      <input type="text" name="start" value="${esc(sub ? sub.start : '')}" maxlength="12" autocomplete="off" style="max-width:10rem"></label>
+    <label class="field"><span>Why these three? <span class="hint">Optional. What feeling are you working with, and how does each song keep it going, turn it up, or bring it down?</span></span>
+      <textarea name="why" maxlength="600">${esc(sub ? sub.why : '')}</textarea></label>
+    <div class="actions"><button class="primary" type="submit">Save playlist</button><span class="status" id="status" role="status" aria-live="polite"></span></div>
+    <p class="saved-line" id="saved-line">${savedLineText(sub)}</p>
+    <p class="small muted">Anyone in your group can edit this until the listening round starts. Keep your scenario to yourselves so the vote stays anonymous.</p>
+  </form>`;
+}
+
+async function submitPlaylist(form){
+  const status = $('#status'), btn = form.querySelector('button[type=submit]');
+  const songs = [0, 1, 2].map(i => ({ title: form['t' + i].value, artist: form['a' + i].value }));
+  const f = form.querySelector('input[name=featured]:checked');
+  status.className = 'status';
+  if (songs.some(s => !s.title.trim())) { status.className = 'status err'; status.textContent = 'Add a title for all three songs.'; return; }
+  if (!f) { status.className = 'status err'; status.textContent = 'Choose the song you’ll play for the class.'; return; }
+  btn.disabled = true; status.textContent = 'Saving…';
+  try {
+    const r = await call({ action: 'submit', period: S.period, group: S.group, songs, featured: Number(f.value), start: form.start.value, why: form.why.value });
+    S.data.mySubmission = r.submission; S.softKey = softKeyOf(S.data);
+    status.textContent = 'Saved.';
+    $('#saved-line').textContent = savedLineText(r.submission);
+  } catch (e) {
+    status.className = 'status err'; status.textContent = e.message;
+  } finally { btn.disabled = false; }
+}
+
+function renderListen(){
+  const d = S.data;
+  app.innerHTML = `<div class="wait">
+    <h1 class="display">Listening round</h1>
+    <p class="lede">Eyes up front. Each playlist plays without its group name, so keep quiet when yours comes up.</p>
+    <p>${d.mySubmission ? 'Your group’s playlist is in.' : 'Your group didn’t save a playlist this round, but you can still vote.'}</p>
+  </div>`;
+}
+
+function renderVote(){
+  const d = S.data;
+  const others = (d.playlists || []).filter(p => p.scenario !== d.myScenario);
+  app.innerHTML = `
+  <h1 class="display">Vote</h1>
+  <p class="lede">Which playlist best nails its scenario? You can’t see group names, and your own playlist isn’t shown. You can change your vote until the results are revealed. Don’t know a song? Tap its title to hear it on YouTube.</p>
+  ${others.length ? others.map(p => {
+    const sc = scenarioOf(p.scenario), mine = d.myVote === p.scenario;
+    return `<article class="pl s-${sc.strategy}${mine ? ' chosen' : ''}">
+      <div class="pl-head"><span class="letter" aria-hidden="true">${p.letter}</span>
+        <div><p class="strategy">${moodLine(sc.strategy, 'mood mood-sm')}${esc(STRATEGY[sc.strategy])}</p><h3>Playlist ${p.letter}: ${esc(sc.title)}</h3></div></div>
+      <p class="scenario-text">${rich(sc.text)}</p>
+      ${songList(p)}
+      ${p.why ? `<p class="why">“${esc(p.why)}”</p>` : ''}
+      <button class="${mine ? 'primary' : 'ghost'} vote-btn" data-action="vote" data-sc="${esc(p.scenario)}" aria-pressed="${mine}">${mine ? 'Your vote' : 'Vote for Playlist ' + p.letter}</button>
+    </article>`;
+  }).join('') : '<p class="muted">There are no other playlists to vote on yet.</p>'}
+  <p class="status" id="status" role="status" aria-live="polite"></p>`;
+}
+
+async function castVote(btn){
+  const status = $('#status');
+  app.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
+  try {
+    const r = await call({ action: 'vote', period: S.period, group: S.group, device: S.device, scenario: btn.dataset.sc });
+    S.data.myVote = r.myVote;
+    renderVote();
+    $('#status').textContent = 'Vote saved.';
+  } catch (e) {
+    app.querySelectorAll('.vote-btn').forEach(b => b.disabled = false);
+    status.className = 'status err'; status.textContent = e.message;
+  }
+}
+
+function renderResults(){
+  const d = S.data;
+  app.innerHTML = `
+  <h1 class="display">Results</h1>
+  <p class="lede">Group names are revealed. Scroll down to find your next favorite song.</p>
+  ${resultsList(d.results || [], { group: S.group, songs: true })}`;
+}
+
+function startStudent(){
+  if (!S.period || !S.group) renderJoin(); else refresh(true);
+  setInterval(() => { if (!document.hidden) refresh(false); }, CONFIG.POLL_MS + Math.floor(Math.random() * 2000));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(false); });
+  if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY) refresh(false); });
+}
+
+/* =====================================================================
+   Teacher mode (open the page with ?teacher at the end of the address)
+   ===================================================================== */
+const T = {
+  pin: sess.get('mp-pin') || (CONFIG.API_URL ? '' : 'demo'),
+  period: sess.get('mp-tperiod') || CONFIG.PERIODS[0].id,
+  data: null, last: '', idx: 0, showMap: false
+};
+
+function renderTeacherLogin(err){
+  $('#ctx').textContent = 'Teacher view';
+  app.innerHTML = `
+  <h1 class="display">Teacher view</h1>
+  <form id="tlogin" style="max-width:22rem">
+    <label class="field"><span>Teacher PIN</span><input type="password" name="pin" autocomplete="current-password" required></label>
+    <div class="actions"><button class="primary" type="submit">Open dashboard</button></div>
+    <p class="status err">${esc(err || '')}</p>
+  </form>`;
+  $('#tlogin input').focus();
+}
+
+async function tRefresh(force){
+  if (!T.pin) return;
+  try {
+    const d = await call({ action: 'teacher', pin: T.pin, period: T.period });
+    setNotice('');
+    const s = JSON.stringify(d);
+    if (force || s !== T.last) { T.last = s; T.data = d; renderTeacher(); }
+  } catch (e) {
+    if (/PIN/.test(e.message)) { T.pin = ''; sess.del('mp-pin'); renderTeacherLogin(e.message); return; }
+    setNotice('Can’t reach the class server. ' + e.message + ' Retrying automatically.');
+  }
+}
+
+async function tAction(params){
+  app.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const d = await call(Object.assign({ pin: T.pin, period: T.period }, params));
+    T.data = d; T.last = JSON.stringify(d); setNotice('');
+  } catch (e) { setNotice(e.message); }
+  renderTeacher();
+}
+
+function renderTeacher(){
+  const d = T.data;
+  $('#ctx').innerHTML = `<span>Teacher view</span><button class="link" data-action="logout">Lock</button>`;
+  const studentUrl = location.origin + location.pathname;
+  let panel = '';
+  if (d.phase === 'collect') {
+    const n = d.groups.filter(g => g.submitted).length;
+    panel = `
+      <h2>${n} of ${GROUPS.length} groups have saved a playlist</h2>
+      <ul class="groups">${d.groups.map(g => {
+        const sc = scenarioOf(g.scenario);
+        return `<li class="${g.submitted ? 'in' : ''}"><strong>${esc(g.group)}</strong>
+          ${T.showMap ? `<span class="small muted">${esc(sc.title)}</span>` : ''}
+          <span class="state">${g.submitted ? 'Saved at ' + esc(timeStr(g.at)) : 'Waiting'}</span></li>`;
+      }).join('')}</ul>
+      <button class="link" data-action="toggle-map">${T.showMap ? 'Hide' : 'Show'} which group has which scenario</button>
+      <p class="small muted">Scenarios are hidden by default so you can project this screen.</p>`;
+  } else if (d.phase === 'listen') {
+    const list = d.playlists;
+    if (!list.length) panel = '<p class="muted">No playlists were saved this round.</p>';
+    else {
+      T.idx = Math.min(Math.max(0, T.idx), list.length - 1);
+      const p = list[T.idx], sc = scenarioOf(p.scenario);
+      panel = `
+      <div class="projector s-${sc.strategy}">
+        <span class="letter" aria-hidden="true">${p.letter}</span>
+        <div>
+          <p class="strategy">${moodLine(sc.strategy, 'mood mood-sm')}${esc(STRATEGY[sc.strategy])}</p>
+          <h2>Playlist ${p.letter}: ${esc(sc.title)}</h2>
+          <p class="scenario-text">${rich(sc.text)}</p>
+          ${songList(p, { links: true })}
+          ${p.why ? `<p class="why">“${esc(p.why)}”</p>` : ''}
+        </div>
+      </div>
+      <div class="pager">
+        <button class="ghost" data-action="prev" ${T.idx === 0 ? 'disabled' : ''}>Previous playlist</button>
+        <span>Playlist ${T.idx + 1} of ${list.length}</span>
+        <button class="ghost" data-action="next" ${T.idx === list.length - 1 ? 'disabled' : ''}>Next playlist</button>
+        <span class="small muted">Arrow keys work too.</span>
+      </div>`;
+    }
+  } else if (d.phase === 'vote') {
+    panel = `
+      <p class="count">${d.voteCount}</p>
+      <p class="lede">${d.voteCount === 1 ? 'vote' : 'votes'} in. Tallies stay hidden until you reveal results.</p>`;
+  } else {
+    const sorted = d.playlists.slice().sort((a, b) => b.votes - a.votes);
+    panel = `<h2>Results</h2>${resultsList(sorted, { songs: false })}`;
+  }
+
+  app.innerHTML = `
+  <div class="t-top">
+    <div class="pills" role="group" aria-label="Class period">
+      ${CONFIG.PERIODS.map(p => `<label class="pick"><input type="radio" name="tperiod" value="${esc(p.id)}" ${p.id === T.period ? 'checked' : ''}><span>${esc(p.label)}</span></label>`).join('')}
+    </div>
+    <p class="student-link">Students go to <code>${esc(studentUrl)}</code></p>
+  </div>
+  <ol class="phases">
+    ${PHASES.map((ph, i) => `<li><button class="phase${ph.id === d.phase ? ' on' : ''}" data-action="phase" data-phase="${ph.id}" ${ph.id === d.phase ? 'aria-current="step"' : ''}><span class="n">${i + 1}</span>${ph.label}</button></li>`).join('')}
+  </ol>
+  ${panel}
+  <div class="round-foot">
+    <span class="muted">${esc(periodLabel(T.period))}, round ${d.round}</span>
+    <button class="danger" data-action="new-round">Start a new round</button>
+  </div>`;
+}
+
+function startTeacher(){
+  document.body.classList.add('teacher');
+  if (!T.pin) renderTeacherLogin(); else tRefresh(true);
+  setInterval(() => { if (!document.hidden && T.pin) tRefresh(false); }, CONFIG.TEACHER_POLL_MS);
+  if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY && T.pin) tRefresh(false); });
+  document.addEventListener('keydown', e => {
+    if (!T.data || T.data.phase !== 'listen' || e.target.closest('input,textarea')) return;
+    if (e.key === 'ArrowRight') { T.idx++; renderTeacher(); }
+    if (e.key === 'ArrowLeft') { T.idx--; renderTeacher(); }
+  });
+}
+
+/* =====================================================================
+   Events
+   ===================================================================== */
+document.addEventListener('submit', e => {
+  const f = e.target;
+  if (f.id === 'join') {
+    e.preventDefault();
+    const p = f.querySelector('input[name=period]:checked'), g = f.querySelector('input[name=group]:checked');
+    if (!p || !g) { setNotice('Choose your class period and tree group.'); return; }
+    S.period = p.value; S.group = g.value;
+    store.set('mp-period', S.period); store.set('mp-group', S.group);
+    S.viewKey = ''; setNotice(''); refresh(true);
+  } else if (f.id === 'playlist') {
+    e.preventDefault(); submitPlaylist(f);
+  } else if (f.id === 'tlogin') {
+    e.preventDefault();
+    T.pin = f.pin.value.trim(); sess.set('mp-pin', T.pin); tRefresh(true);
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target.name === 'tperiod') {
+    T.period = e.target.value; sess.set('mp-tperiod', T.period); T.idx = 0; tRefresh(true);
+  }
+});
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-action]');
+  if (!b) return;
+  const a = b.dataset.action;
+  if (a === 'change-group') { S.data = null; S.viewKey = ''; renderJoin(); }
+  else if (a === 'vote') castVote(b);
+  else if (a === 'phase') { if (b.dataset.phase !== T.data.phase) tAction({ action: 'setPhase', phase: b.dataset.phase }); }
+  else if (a === 'prev') { T.idx--; renderTeacher(); }
+  else if (a === 'next') { T.idx++; renderTeacher(); }
+  else if (a === 'toggle-map') { T.showMap = !T.showMap; renderTeacher(); }
+  else if (a === 'logout') { T.pin = ''; sess.del('mp-pin'); T.data = null; renderTeacherLogin(); }
+  else if (a === 'new-round') {
+    if (confirm(`Start a new round for ${periodLabel(T.period)}? Every screen goes back to step 1 and groups get freshly shuffled scenarios. Earlier playlists and votes stay in the spreadsheet.`)) {
+      T.idx = 0; tAction({ action: 'newRound' });
+    }
+  }
+});
+
+/* =====================================================================
+   Boot
+   ===================================================================== */
+if (!CONFIG.API_URL) {
+  $('#demo').innerHTML = '<p>Demo mode: playlists and votes are saved only in this browser, so other devices won’t see them. Open a second tab with <strong>?teacher</strong> on the address to try the teacher view. Add your Apps Script URL to <strong>CONFIG.API_URL</strong> before class.</p>';
+}
+if (new URLSearchParams(location.search).has('teacher')) startTeacher(); else startStudent();
+</script>
+</body>
+</html>
