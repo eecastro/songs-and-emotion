@@ -90,15 +90,7 @@ legend{font-weight:700; margin-bottom:.6rem; padding:0}
 
 /* scenario card: the one loud element */
 .scenario{background:var(--surface); border-radius:var(--r-lg); padding:1.4rem 1.4rem 1.5rem; margin-top:.75rem}
-.mood{display:block}
-.mood path{fill:none; stroke:var(--tone); stroke-linecap:round; stroke-width:3.5}
-.mood-hero{width:100%; height:76px; margin:0 0 .6rem}
-.mood-sm{width:46px; height:16px; flex:none}
-.mood-sm path{stroke-width:9}
-.draw path{stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.2s cubic-bezier(.3,.1,.2,1) .1s forwards}
-@keyframes draw{to{stroke-dashoffset:0}}
-@media (prefers-reduced-motion: reduce){ .draw path{animation:none; stroke-dashoffset:0} }
-.strategy{color:var(--tone); font-weight:700; margin:0; display:flex; align-items:center; gap:.5rem}
+.scenario .scenario-text{font-size:clamp(1.2rem,3.4vw,1.4rem); line-height:1.5; margin:0}
 .scenario-text{font-size:1.12rem; max-width:34em}
 
 /* song form */
@@ -116,7 +108,7 @@ legend{font-weight:700; margin-bottom:.6rem; padding:0}
 /* playlists */
 .pl{background:var(--surface); border-radius:var(--r-lg); padding:1.25rem 1.4rem 1.4rem; margin:1rem 0; border:2px solid transparent}
 .pl.chosen{border-color:var(--tone)}
-.pl-head{display:flex; gap:1rem; align-items:flex-start}
+.pl-head{display:flex; gap:.9rem; align-items:center; margin-bottom:.5rem}
 .letter{font-family:var(--display); font-weight:800; font-size:3.2rem; line-height:.85; color:var(--tone); min-width:2.4rem}
 .pl h3{font-size:1.35rem; margin:.15rem 0 .2rem}
 .songs{list-style:none; padding:0; margin:1rem 0 0; counter-reset:s}
@@ -215,11 +207,6 @@ const CONFIG = {
    ===================================================================== */
 const GROUPS = ['Birch', 'Cedar', 'Maple', 'Oak', 'Pine', 'Redwood', 'Willow'];
 const SCENARIO_KEYS = ['focus', 'vibes', 'energy', 'confidence', 'stress', 'frustration', 'sunday'];
-const STRATEGY = {
-  maintain: 'Maintain: keep this feeling going',
-  enhance: 'Enhance: turn this feeling up',
-  reduce: 'Reduce: bring this feeling down'
-};
 const SCENARIO_SETS = {
   college: {
     focus: { title: 'Keep the Focus Going', strategy: 'maintain',
@@ -231,7 +218,7 @@ const SCENARIO_SETS = {
     confidence: { title: 'Boost the Confidence', strategy: 'enhance',
       text: 'You’re about to walk into that class where you don’t know anyone yet, or you’re heading to a party where you only know one person. Create a playlist that **enhances** your self-assurance from nervous to naturally social.' },
     stress: { title: 'Dial Down the Stress', strategy: 'reduce',
-      text: 'You just checked Canvas/Blackboard and discovered three assignments you forgot about, your meal plan is running low, and your parents keep texting about grades. Build a playlist that **reduces** this overwhelming anxiety and stress to manageable levels.' },
+      text: 'You just checked Canvas/Blackboard and discovered three assignments you forgot about, your meal plan is running low, and your parents keep texting about grades. Build a playlist that **reduces** this overwhelming anxiety & stress to manageable levels.' },
     frustration: { title: 'Cool the Frustration', strategy: 'reduce',
       text: 'Your roommate did that annoying thing AGAIN, or you just had the worst group project meeting ever. You need to **reduce** this anger before you say something you’ll regret. What songs help you decompress?' },
     sunday: { title: 'Ease the Homesickness', strategy: 'reduce',
@@ -295,13 +282,10 @@ function newMap(shuffle = true){
 }
 function setNotice(msg){ $('#notice').textContent = msg || ''; }
 
-const LINES = {
-  maintain: 'M4 29 C 24 17, 44 41, 64 29 S 104 17, 124 29 S 164 41, 196 29',
-  enhance: 'M4 52 C 40 51, 72 45, 102 33 S 160 9, 196 6',
-  reduce: 'M4 6 C 40 7, 72 13, 102 25 S 160 49, 196 52'
-};
-function moodLine(strategy, cls){
-  return `<svg class="${cls}" viewBox="0 0 200 58" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path pathLength="1" d="${LINES[strategy] || LINES.maintain}"/></svg>`;
+// Scenarios read exactly as in the Google Doc: the quoted title, then the text.
+function scenarioPara(key){
+  const sc = scenarioOf(key);
+  return `<p class="scenario-text"><strong>“${esc(sc.title)}”</strong> – ${rich(sc.text)}</p>`;
 }
 
 /* =====================================================================
@@ -407,13 +391,10 @@ const Local = {
    ===================================================================== */
 const app = $('#app');
 
-function scenarioCard(key, { tag = 'h1', animate = false } = {}){
-  const sc = scenarioOf(key);
-  return `<article class="scenario s-${sc.strategy}">
-    ${moodLine(sc.strategy, 'mood mood-hero' + (animate ? ' draw' : ''))}
-    <p class="strategy">${esc(STRATEGY[sc.strategy])}</p>
-    <${tag} class="display">${esc(sc.title)}</${tag}>
-    <p class="scenario-text">${rich(sc.text)}</p>
+function scenarioCard(key){
+  return `<article class="scenario">
+    <h1 class="sr">Your scenario</h1>
+    ${scenarioPara(key)}
   </article>`;
 }
 
@@ -439,7 +420,7 @@ function resultsList(results, { group = null, songs = false } = {}){
     return `<li class="res s-${sc.strategy}${win ? ' win' : ''}">
       <div class="res-top">
         <span class="letter" aria-hidden="true">${r.letter}</span>
-        <div class="res-name"><strong>${esc(r.group)}${group === r.group ? ' (your group)' : ''}</strong><span>Playlist ${r.letter}: ${esc(sc.title)}</span></div>
+        <div class="res-name"><strong>${esc(r.group)}${group === r.group ? ' (your group)' : ''}</strong><span>Playlist ${r.letter}, “${esc(sc.title)}”</span></div>
         <span class="res-votes">${r.votes} ${r.votes === 1 ? 'vote' : 'votes'}</span>
       </div>
       <div class="meter" aria-hidden="true"><span style="width:${Math.round(r.votes / max * 100)}%"></span></div>
@@ -530,11 +511,11 @@ function renderStudent(fresh){
   return renderResults();
 }
 
-function renderCollect(animate){
+function renderCollect(){
   const d = S.data, sub = d.mySubmission;
   const v = (i, f) => esc(sub && sub.songs[i] ? sub.songs[i][f] : '');
   app.innerHTML = `
-  ${scenarioCard(d.myScenario, { animate })}
+  ${scenarioCard(d.myScenario)}
   <form id="playlist" novalidate>
     <h2>Your three songs</h2>
     ${[0, 1, 2].map(i => `
@@ -593,8 +574,8 @@ function renderVote(){
     const sc = scenarioOf(p.scenario), mine = d.myVote === p.scenario;
     return `<article class="pl s-${sc.strategy}${mine ? ' chosen' : ''}">
       <div class="pl-head"><span class="letter" aria-hidden="true">${p.letter}</span>
-        <div><p class="strategy">${moodLine(sc.strategy, 'mood mood-sm')}${esc(STRATEGY[sc.strategy])}</p><h3>Playlist ${p.letter}: ${esc(sc.title)}</h3></div></div>
-      <p class="scenario-text">${rich(sc.text)}</p>
+        <h3>Playlist ${p.letter}</h3></div>
+      ${scenarioPara(p.scenario)}
       ${songList(p)}
       ${p.why ? `<p class="why">“${esc(p.why)}”</p>` : ''}
       <button class="${mine ? 'primary' : 'ghost'} vote-btn" data-action="vote" data-sc="${esc(p.scenario)}" aria-pressed="${mine}">${mine ? 'Your vote' : 'Vote for Playlist ' + p.letter}</button>
@@ -635,6 +616,13 @@ function startStudent(){
 /* =====================================================================
    Teacher mode (open the page with ?teacher at the end of the address)
    ===================================================================== */
+// The teacher bookmark carries the key: …/?teacher=YOUR-KEY (the TEACHER_PIN set in Apps Script).
+// It is read once, kept for this tab, and removed from the address bar so it never shows on the projector.
+const linkKey = new URLSearchParams(location.search).get('teacher');
+if (linkKey) {
+  sess.set('mp-pin', linkKey);
+  try { history.replaceState(null, '', location.pathname + '?teacher' + location.hash); } catch (e) {}
+}
 const T = {
   pin: sess.get('mp-pin') || (CONFIG.API_URL ? '' : 'demo'),
   period: sess.get('mp-tperiod') || CONFIG.PERIODS[0].id,
@@ -645,8 +633,9 @@ function renderTeacherLogin(err){
   $('#ctx').textContent = 'Teacher view';
   app.innerHTML = `
   <h1 class="display">Teacher view</h1>
+  <p class="lede">Open the dashboard from your teacher bookmark: this site’s address followed by <strong>?teacher=</strong> and your key, the TEACHER_PIN set in Apps Script.</p>
   <form id="tlogin" style="max-width:22rem">
-    <label class="field"><span>Teacher PIN</span><input type="password" name="pin" autocomplete="current-password" required></label>
+    <label class="field"><span>Or enter the key here</span><input type="password" name="pin" autocomplete="current-password" required></label>
     <div class="actions"><button class="primary" type="submit">Open dashboard</button></div>
     <p class="status err">${esc(err || '')}</p>
   </form>`;
@@ -661,7 +650,7 @@ async function tRefresh(force){
     const s = JSON.stringify(d);
     if (force || s !== T.last) { T.last = s; T.data = d; renderTeacher(); }
   } catch (e) {
-    if (/PIN/.test(e.message)) { T.pin = ''; sess.del('mp-pin'); renderTeacherLogin(e.message); return; }
+    if (/PIN/.test(e.message)) { T.pin = ''; sess.del('mp-pin'); renderTeacherLogin('That key doesn’t match the TEACHER_PIN in Apps Script. Check your bookmark.'); return; }
     setNotice('Can’t reach the class server. ' + e.message + ' Retrying automatically.');
   }
 }
@@ -677,7 +666,7 @@ async function tAction(params){
 
 function renderTeacher(){
   const d = T.data;
-  $('#ctx').innerHTML = `<span>Teacher view</span><button class="link" data-action="logout">Lock</button>`;
+  $('#ctx').textContent = 'Teacher view';
   const studentUrl = location.origin + location.pathname;
   let panel = '';
   if (d.phase === 'collect') {
@@ -702,9 +691,8 @@ function renderTeacher(){
       <div class="projector s-${sc.strategy}">
         <span class="letter" aria-hidden="true">${p.letter}</span>
         <div>
-          <p class="strategy">${moodLine(sc.strategy, 'mood mood-sm')}${esc(STRATEGY[sc.strategy])}</p>
-          <h2>Playlist ${p.letter}: ${esc(sc.title)}</h2>
-          <p class="scenario-text">${rich(sc.text)}</p>
+          <h2 class="sr">Playlist ${p.letter}</h2>
+          ${scenarioPara(p.scenario)}
           ${songList(p, { links: true })}
           ${p.why ? `<p class="why">“${esc(p.why)}”</p>` : ''}
         </div>
@@ -790,7 +778,6 @@ document.addEventListener('click', e => {
   else if (a === 'prev') { T.idx--; renderTeacher(); }
   else if (a === 'next') { T.idx++; renderTeacher(); }
   else if (a === 'toggle-map') { T.showMap = !T.showMap; renderTeacher(); }
-  else if (a === 'logout') { T.pin = ''; sess.del('mp-pin'); T.data = null; renderTeacherLogin(); }
   else if (a === 'new-round') {
     if (confirm(`Start a new round for ${periodLabel(T.period)}? Every screen goes back to step 1 and groups get freshly shuffled scenarios. Earlier playlists and votes stay in the spreadsheet.`)) {
       T.idx = 0; tAction({ action: 'newRound' });
